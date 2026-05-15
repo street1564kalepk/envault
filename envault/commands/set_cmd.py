@@ -1,36 +1,36 @@
-"""Set command: add or update a variable in a vault."""
+"""Set command: write a variable into a vault, updating audit metadata."""
 
-import click
-from envault.store import vault_exists, load_vault, save_vault
+from datetime import datetime, timezone
+
+from envault.store import load_vault, save_vault, vault_exists
 
 
-@click.command()
-@click.argument("project")
-@click.argument("key")
-@click.argument("value")
-@click.password_option(
-    prompt="Master password",
-    confirmation_prompt=False,
-    help="Master password to decrypt/encrypt the vault.",
-)
-def set_var(project: str, key: str, value: str, password: str):
-    """Set KEY=VALUE in the PROJECT vault."""
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def set_var(project: str, password: str, key: str, value: str) -> None:
+    """Set *key* to *value* in the named vault, creating audit metadata."""
     if not vault_exists(project):
-        click.echo(
-            click.style(
-                f"Vault '{project}' does not exist. Run 'envault init {project}' first.",
-                fg="red",
-            )
-        )
-        raise SystemExit(1)
+        raise FileNotFoundError(f"Vault '{project}' does not exist.")
 
-    try:
-        data = load_vault(project, password)
-    except Exception:
-        click.echo(click.style("Invalid password or corrupted vault.", fg="red"))
-        raise SystemExit(1)
+    data = load_vault(project, password)
 
-    action = "Updated" if key in data else "Set"
+    # Ensure metadata bucket exists
+    if "__meta__" not in data:
+        data["__meta__"] = {}
+
+    now = _now_iso()
+    if key in data.get("__meta__", {}):
+        entry = data["__meta__"][key]
+        entry["updated_at"] = now
+        entry["version"] = entry.get("version", 1) + 1
+    else:
+        data["__meta__"][key] = {
+            "created_at": now,
+            "updated_at": now,
+            "version": 1,
+        }
+
     data[key] = value
     save_vault(project, password, data)
-    click.echo(click.style(f"✓ {action} '{key}' in vault '{project}'.", fg="green"))
