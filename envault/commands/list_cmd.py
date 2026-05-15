@@ -28,7 +28,8 @@ def list_vars(project: str, password: str, show_values: bool):
         click.echo(click.style(f"Vault '{project}' is empty.", fg="yellow"))
         return
 
-    click.echo(click.style(f"Variables in vault '{project}':", bold=True))
+    count = len(data)
+    click.echo(click.style(f"Variables in vault '{project}' ({count} total):", bold=True))
     for key, value in sorted(data.items()):
         if show_values:
             click.echo(f"  {key}={value}")
