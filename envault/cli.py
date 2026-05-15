@@ -8,6 +8,12 @@ from envault.commands.export_cmd import export_vars
 from envault.commands.import_cmd import import_vars
 
 
+def _default_project():
+    """Return the current directory name as the default project name."""
+    import os
+    return os.path.basename(os.getcwd())
+
+
 @click.group()
 def cli():
     """envault — Secure local .env file manager."""
@@ -22,7 +28,7 @@ cli.add_command(delete_var, name="delete")
 
 
 @cli.command("export")
-@click.option("--project", "-p", default=lambda: __import__("os").path.basename(__import__("os").getcwd()), show_default=True, help="Project name")
+@click.option("--project", "-p", default=_default_project, show_default=True, help="Project name")
 @click.option("--format", "-f", "fmt", default="dotenv", type=click.Choice(["dotenv", "shell", "json"]), show_default=True, help="Output format")
 @click.option("--output", "-o", default=None, help="Output file path (stdout if omitted)")
 @click.password_option("--password", "-P", confirmation_prompt=False, help="Vault password")
@@ -33,7 +39,7 @@ def export_cmd(project, fmt, output, password):
 
 @cli.command("import")
 @click.argument("filepath")
-@click.option("--project", "-p", default=lambda: __import__("os").path.basename(__import__("os").getcwd()), show_default=True, help="Project name")
+@click.option("--project", "-p", default=_default_project, show_default=True, help="Project name")
 @click.option("--overwrite", is_flag=True, default=False, help="Overwrite existing keys")
 @click.password_option("--password", "-P", confirmation_prompt=False, help="Vault password")
 def import_cmd(filepath, project, overwrite, password):
